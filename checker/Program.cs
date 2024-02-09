@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace checker
 {
@@ -13,18 +14,22 @@ namespace checker
         {
             var builder = Host.CreateDefaultBuilder();
 
-            builder.ConfigureServices(services =>
-                services.AddHealthChecks()
-                    .AddCheck<HealthyCheck>(nameof(HealthyCheck))
-                    .AddCheck<UnhealthyCheck>(nameof(UnhealthyCheck))
-            );
+            var settings = typeof(Program).Assembly.GetManifestResourceStream("checker.appsettings.json");
+                
+            if(settings != default)
+                builder.ConfigureAppConfiguration(x => x.AddJsonStream(settings));
+
+            builder
+                .ConfigureServices(services =>
+                    services.AddHealthChecks()
+                        .AddCheck<HealthyCheck>(nameof(HealthyCheck))
+                        .AddCheck<UnhealthyCheck>(nameof(UnhealthyCheck)));
 
             var app = builder.Build();
             app.Start();
 
             var config = app.Services.GetService<IConfiguration>();
-
-            Console.WriteLine(config.GetValue<string>("config-test"));
+            Console.WriteLine(config?.GetValue<string>("config-test"));
 
             var healthCheckService = app.Services.GetRequiredService<HealthCheckService>();
 
